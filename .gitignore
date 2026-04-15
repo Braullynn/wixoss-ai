@@ -1,0 +1,41 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.venv
+.env
+.tox
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+*,cover
+.hypothesis/
+
+# Treinamento / Resultados (Checkpoints e Buffer)
+wixoss-dql/
+training_results/
+checkpoint.pt
+replay_buffer.pkl
+replay_buffer.pkl.gz
+metrics.json
+
+# Jupyter
+.ipynb_checkpoints
+
+# VS Code / OS
+.vscode/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,12 @@
+{
+  "name": "wixoss-ml-training",
+  "version": "1.0.0",
+  "description": "Submódulo para treinamento de DQL para Wixoss",
+  "main": "headless/HeadlessRunner.js",
+  "scripts": {
+    "test-headless": "node headless/HeadlessRunner.js --test"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {}
+}
