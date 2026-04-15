@@ -17,29 +17,19 @@ Instale as bibliotecas necessárias via terminal (PowerShell ou CMD):
 pip install torch numpy
 ```
 
----
+### Dependências do Motor (Node.js)
+Na pasta raiz do `webxoss-core`, instale as dependências:
 
-## 2. Configuração de Pastas
-
-O script de treinamento está configurado por padrão para salvar no caminho do Google Colab (`/content/drive/...`). 
-
-Para rodar localmente, abra o arquivo `colab/wixoss_dql_training.py` e altere a linha 11:
-
-**De:**
-```python
-DRIVE_PATH = "/content/drive/MyDrive/wixoss-dql"
-```
-
-**Para (exemplo de pasta local):**
-```python
-DRIVE_PATH = "./training_results"
+```bash
+cd webxoss-core
+npm install
 ```
 
 ---
 
-## 3. Como Executar
+## 2. Como Executar
 
-1. Abra o terminal na pasta raiz do projeto de treinamento:
+1. Abra o terminal na pasta do submódulo de treinamento:
    ```bash
    cd webxoss-core/ml-training
    ```
@@ -49,19 +39,34 @@ DRIVE_PATH = "./training_results"
    python colab/wixoss_dql_training.py
    ```
 
+   Por padrão, os resultados serão salvos em `./training_results/`.
+
+### Opções Disponíveis (argparse)
+
+```bash
+# Alterar pasta de saída
+python colab/wixoss_dql_training.py --output ./meus_resultados
+
+# Treinar um número específico de episódios
+python colab/wixoss_dql_training.py --episodes 5000
+
+# Usar batch size maior (requer mais RAM/VRAM)
+python colab/wixoss_dql_training.py --batch_size 128
+```
+
 ### O que esperar:
 - O terminal começará a mostrar o log das partidas:
-  `🎮 EP 0001 | WIN | Reward: +1.45 | WR: 100.0% | Eps: 0.995`
-- A cada 10 episódios, um arquivo de checkpoint (`checkpoint.pt`) será salvo na pasta definida em `DRIVE_PATH`.
+  `FINALIZADO EP 0001 (1/100000) | WIN | Time: 2.3s | Reward: +1.45 | WR: 100.0%`
+- A cada 10 episódios, um arquivo de checkpoint (`checkpoint.pt`) será salvo.
 - Se você fechar o terminal e abrir novamente, o treino continuará automaticamente de onde parou.
 
 ---
 
-## 4. Dicas de Performance
+## 3. Dicas de Performance
 
 - **GPU**: Se você tiver uma placa de vídeo NVIDIA, o PyTorch tentará usá-la automaticamente se os drivers CUDA estiverem instalados.
 - **Aceleração**: O treino local é geralmente mais rápido que no Colab Free, pois não há latência de rede para salvar os checkpoints.
-- **Teste Rápido**: Para testar apenas se a integração está funcionando sem rodar o treino completo, você pode usar:
+- **Teste Rápido**: Para testar apenas se a integração Node.js está funcionando sem rodar o treino completo:
   ```bash
   node headless/HeadlessRunner.js --test
   ```
