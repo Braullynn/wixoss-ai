@@ -31,6 +31,14 @@ WhiteHopeAdvisor.prototype.getBestActionIdx = function(selectMsgs, gameState, av
     return idx;
 };
 
+/**
+ * Retorna a decisão completa da estratégia (incluindo múltiplos índices)
+ * Útil para PAY_ENER e automações de muleta.
+ */
+WhiteHopeAdvisor.prototype.getBestResponse = function(selectMsgs, gameState) {
+    return this.strategy.evaluateSelects(selectMsgs, gameState);
+};
+
 if (typeof module !== 'undefined') {
     module.exports = WhiteHopeAdvisor;
 }

@@ -27,23 +27,27 @@ RewardCalculator.prototype.reset = function() {
  */
 RewardCalculator.prototype.calculateStepReward = function(gameState, actionFollowsAdvisor) {
     let reward = 0;
+    const myLife = gameState.myLife !== undefined ? gameState.myLife : this.lastLifeCount;
+    const enemyLife = gameState.enemyLife !== undefined ? gameState.enemyLife : this.lastEnemyLifeCount;
+    const turnCount = gameState.turnCount || 0;
+    const myHand = gameState.myHand || [];
 
     // 1. Recompensa por causar dano (reduzir life cloth inimigo)
-    if (gameState.enemyLife < this.lastEnemyLifeCount) {
-        reward += 0.15 * (this.lastEnemyLifeCount - gameState.enemyLife);
-        this.lastEnemyLifeCount = gameState.enemyLife;
+    if (enemyLife < this.lastEnemyLifeCount) {
+        reward += 0.15 * (this.lastEnemyLifeCount - enemyLife);
+        this.lastEnemyLifeCount = enemyLife;
     }
 
     // 2. Penalidade por tomar dano
-    if (gameState.myLife < this.lastLifeCount) {
-        reward -= 0.1 * (this.lastLifeCount - gameState.myLife);
-        this.lastLifeCount = gameState.myLife;
+    if (myLife < this.lastLifeCount) {
+        reward -= 0.1 * (this.lastLifeCount - myLife);
+        this.lastLifeCount = myLife;
     }
 
     // 3. Recompensa por sobrevivência (novo turno)
-    if (gameState.turnCount > this.lastTurnCount) {
+    if (turnCount > this.lastTurnCount) {
         reward += 0.05;
-        this.lastTurnCount = gameState.turnCount;
+        this.lastTurnCount = turnCount;
     }
 
     // 4. Incentivo ao Mestre (Guided Exploration)
@@ -52,7 +56,7 @@ RewardCalculator.prototype.calculateStepReward = function(gameState, actionFollo
     }
 
     // 5. Penalidade por "Mão Travada" (gestão de recursos)
-    if (gameState.myHand.length === 0 && gameState.phase === 'mainPhase') {
+    if (myHand.length === 0 && (gameState.phase === 'mainPhase' || !gameState.phase)) {
         reward -= 0.05;
     }
 

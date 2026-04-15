@@ -140,13 +140,22 @@ function runMLTraining() {
     
     // Player 2: Mentor (WhiteHope Bot)
     const logger = new BotLogger('[OPPONENT-BOT]');
-    logger.enabled = false;
+    logger.enabled = true;
     const strategy2 = new WhiteHopeStrategy(logger);
     const controller2 = new BotController(strategy2, logger);
     controller2.actionDelay = { min: 0, max: 0 }; // SEM DELAY no treino
 
     const whiteHopeDeck = BotDecks.getDeck('WHITE_HOPE').deck;
-
+    
+    runner.onGameOverCallback = (result) => {
+        console.log(`[RUNNER] Partida finalizada. Codigo de saida: 0`);
+        bridge.close();
+        // Pequeno delay para garantir que a ultima mensagem stdout (game_over) chegue ao Python
+        setTimeout(() => {
+            process.exit(0);
+        }, 100);
+    };
+    
     runner.setupMatch(bridge, controller2, whiteHopeDeck, whiteHopeDeck);
 }
 

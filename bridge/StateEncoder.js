@@ -19,71 +19,74 @@ StateEncoder.prototype.encode = function(gameState) {
     const state = new Float32Array(this.STATE_SIZE);
     let i = 0;
 
+    const myEner = gameState.myEner || [];
+    const myHand = gameState.myHand || [];
+    const myField = gameState.myField || [null, null, null];
+    const enemyField = gameState.enemyField || [null, null, null];
+    const myLrigDeck = gameState.myLrigDeck || [];
+
     // --- 1. Global (9 features) ---
-    state[i++] = gameState.myLife / 7;                      // Vida normalizada
-    state[i++] = gameState.enemyLife / 7;
-    state[i++] = Math.min(gameState.myEner.length / 10, 1);  // Ener (capado em 10)
-    state[i++] = Math.min(gameState.enemyEnerCount / 10, 1);
-    state[i++] = Math.min(gameState.myHand.length / 10, 1);  // Mão
-    state[i++] = Math.min(gameState.enemyHandCount / 10, 1);
-    state[i++] = gameState.myLrig ? gameState.myLrig.level / 5 : 0;
-    state[i++] = Math.min(gameState.turnCount / 30, 1);      // Turno
+    state[i++] = (gameState.myLife || 0) / 7;                      
+    state[i++] = (gameState.enemyLife || 0) / 7;
+    state[i++] = Math.min(myEner.length / 10, 1);  
+    state[i++] = Math.min((gameState.enemyEnerCount || 0) / 10, 1);
+    state[i++] = Math.min(myHand.length / 10, 1);  
+    state[i++] = Math.min((gameState.enemyHandCount || 0) / 10, 1);
+    state[i++] = gameState.myLrig ? (gameState.myLrig.level || 0) / 5 : 0;
+    state[i++] = Math.min((gameState.turnCount || 0) / 30, 1);      
     state[i++] = gameState.isMyTurn ? 1 : 0;
 
     // --- 2. Campo do Jogador (3 zonas x 4 features = 12) ---
     for (let zoneIdx = 0; zoneIdx < 3; zoneIdx++) {
-        const signi = gameState.myField[zoneIdx];
-        state[i++] = signi ? 1 : 0;                          // Existência
-        state[i++] = signi ? signi.level / 4 : 0;            // Nível
-        state[i++] = signi ? signi.power / 15000 : 0;        // Poder
-        state[i++] = (signi && signi.isUp) ? 1 : 0;          // Estado UP
+        const signi = myField[zoneIdx];
+        state[i++] = signi ? 1 : 0;                          
+        state[i++] = signi ? (signi.level || 0) / 4 : 0;            
+        state[i++] = signi ? (signi.power || 0) / 15000 : 0;        
+        state[i++] = (signi && signi.isUp) ? 1 : 0;          
     }
 
     // --- 3. Campo Inimigo (3 zonas x 4 features = 12) ---
     for (let zoneIdx = 0; zoneIdx < 3; zoneIdx++) {
-        const signi = gameState.enemyField[zoneIdx];
+        const signi = enemyField[zoneIdx];
         state[i++] = signi ? 1 : 0;
-        state[i++] = signi ? signi.level / 4 : 0;
-        state[i++] = signi ? signi.power / 15000 : 0;
+        state[i++] = signi ? (signi.level || 0) / 4 : 0;
+        state[i++] = signi ? (signi.power || 0) / 15000 : 0;
         state[i++] = (signi && signi.isUp) ? 1 : 0;
     }
 
     // --- 4. Fase de Jogo (One-Hot 8 features) ---
     const phases = ['upPhase', 'drawPhase', 'enerPhase', 'growPhase', 'mainPhase', 'attackPhase', 'endPhase', 'setup'];
-    const currentPhase = gameState.phase || 'mainPhase';
+    const currentPhase = gameState.phase || 'setup';
     phases.forEach(p => {
         state[i++] = (currentPhase === p) ? 1 : 0;
     });
 
     // --- 5. Composição da Mão (10 features) ---
-    // % de cartas lv1, lv2, lv3, lv4, Guard, Spell, etc.
-    if (gameState.myHand.length > 0) {
-        state[i++] = gameState.myHand.filter(c => c.level === 1).length / gameState.myHand.length;
-        state[i++] = gameState.myHand.filter(c => c.level === 2).length / gameState.myHand.length;
-        state[i++] = gameState.myHand.filter(c => c.level === 3).length / gameState.myHand.length;
-        state[i++] = gameState.myHand.filter(c => c.level >= 4).length / gameState.myHand.length;
-        state[i++] = gameState.myHand.filter(c => c.type === 'SPELL').length / gameState.myHand.length;
-        state[i++] = gameState.myHand.filter(c => c.name && c.name.includes('Servant')).length / gameState.myHand.length;
+    if (myHand.length > 0) {
+        state[i++] = myHand.filter(c => c && c.level === 1).length / myHand.length;
+        state[i++] = myHand.filter(c => c && c.level === 2).length / myHand.length;
+        state[i++] = myHand.filter(c => c && c.level === 3).length / myHand.length;
+        state[i++] = myHand.filter(c => c && c.level >= 4).length / myHand.length;
+        state[i++] = myHand.filter(c => c && c.type === 'SPELL').length / myHand.length;
+        state[i++] = myHand.filter(c => c && c.name && c.name.includes('Servant')).length / myHand.length;
     } else {
-        i += 6; // Pula se mão vazia
+        i += 6; 
     }
-    i += 4; // Reservado para futuras métricas de mão
+    i += 4; 
 
     // --- 6. Cartas Específicas / PIDs Críticos (11 features) ---
-    // Presença de cartas chave na mão ou em campo
     const checkPID = (pid) => {
-        const inHand = gameState.myHand.some(c => c.pid === pid);
-        const inField = gameState.myField.some(c => c && c.pid === pid);
-        const inArts = gameState.myLrigDeck && gameState.myLrigDeck.some(c => c.pid === pid);
+        const inHand = myHand.some(c => c && c.pid === pid);
+        const inField = myField.some(c => c && c.pid === pid);
+        const inArts = myLrigDeck.some(c => c && c.pid === pid);
         return (inHand || inField || inArts) ? 1 : 0;
     };
 
-    state[i++] = checkPID(110); // Baroque Defense (Defesa Crítica)
-    state[i++] = checkPID(112); // Servant O (Guarda)
+    state[i++] = checkPID(110); // Baroque Defense
+    state[i++] = checkPID(112); // Servant O
     state[i++] = checkPID(113); // Servant D
-    state[i++] = checkPID(108); // Tama Level 4 (Win Condition)
+    state[i++] = checkPID(108); // Tama Level 4
     
-    // Preencher o restante até 62
     while (i < this.STATE_SIZE) {
         state[i++] = 0;
     }
