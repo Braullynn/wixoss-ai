@@ -63,7 +63,7 @@ O script detecta automaticamente os checkpoints no Drive e continua de onde paro
 
 # Célula 2: Retomar treino (mesmo comando do Passo 2)
 %cd /content/webxoss-core/ml-training
-!python colab/wixoss_dql_training.py --output /content/drive/MyDrive/wixoss-dql --episodes 10000
+!python colab/wixoss_dql_training.py --output /content/drive/MyDrive/wixoss-dql --episodes 50000
 ```
 
 ---

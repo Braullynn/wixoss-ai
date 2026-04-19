@@ -25,7 +25,7 @@ def run_training():
     STATE_SIZE = 62
     ACTION_SIZE = 40
     BATCH_SIZE = args.batch_size
-    EPISODES_PER_SAVE = 10
+    EPISODES_PER_SAVE = 500
     TARGET_UPDATE_FREQ = 500
 
     # 1. Garantir diretório de saída
