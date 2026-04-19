@@ -2,6 +2,9 @@
 
 Este documento registra os principais obstáculos encontrados durante a estabilização do treinamento de Deep Q-Learning e as soluções inovadoras implementadas para garantir a continuidade das partidas e o aprendizado da IA.
 
+ADICIONAR NOVOS TEXTOS SEMPRE ABAIXO DO ATUAL, NÃO APAGUE 
+O QUE JÁ SEM TEM ESCRITO SEM AUTROZAÇÃO DO USER.
+
 ---
 
 ## 1. O Desafio do Descarte Múltiplo (Deadlock Logístico)

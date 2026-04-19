@@ -64,10 +64,24 @@ GameBridge.prototype.resetActivityWatchdog = function() {
 GameBridge.prototype.startInactivityWatchdog = function() {
     this.resetActivityWatchdog();
     this._activityWatchdog = setTimeout(() => {
-        console.log(`[BRIDGE] [WATCHDOG] Motor silenciou por 5s apos resposta. Tentando ressurreição...`);
-        if (this._lastResponse && this.botSocket) {
-            // Tenta re-enviar a última mensagem (pode ter sido perdida no buffer interno do core)
-            this.botSocket.emit('gameMessage', this._lastResponse);
+        console.log(`[BRIDGE] [WATCHDOG] Motor silenciou por 5s. A ultima resposta da IA falhou! Mentor assumindo ressureição...`);
+        if (this._lastSelectMsgs && this._lastSelectMsgs.length > 0 && this.botSocket) {
+            // Se travou, significa que a reposta da IA causou deadlock. O Mentor toma a direção!
+            const mentorBest = this.advisor.getBestResponse(this._lastSelectMsgs, this.gameState);
+            let fallbackLabel = 'FAIL_SAFE_SKIP';
+            let fallbackInput = [];
+            
+            if (mentorBest) {
+                fallbackLabel = mentorBest.label;
+                fallbackInput = mentorBest.selectedIndexes;
+                console.log(`[WATCHDOG] Injetando ação Mentor de emergência: ${fallbackLabel} [${fallbackInput}]`);
+            }
+
+            const responseData = {
+                id: Math.floor(Math.random() * 1000000),
+                data: { label: fallbackLabel, input: fallbackInput }
+            };
+            this.botSocket.emit('gameMessage', responseData);
         }
     }, 5000);
 };
@@ -127,6 +141,7 @@ GameBridge.prototype.handleGameMessage = function(msg) {
         }
 
         if (selectMsgs.length > 0) {
+            this._lastSelectMsgs = selectMsgs; // Guarda para o Watchdog
             this.askIA(selectMsgs);
         }
     });
@@ -205,10 +220,12 @@ GameBridge.prototype.askIA = async function(selectMsgs) {
  * Auxiliar: Completa o descarte se a IA escolheu menos que o mínimo.
  */
 GameBridge.prototype._assistDiscard = function(originalMsg, finalIndexes, selectMsgs) {
-    const minRequired = originalMsg ? (originalMsg.min || 0) : 0;
+    // Replicando a mesma extração exata do Mentor Nativo do WIXOSS
+    const minRequired = originalMsg ? (originalMsg.max || originalMsg.min || 1) : 1;
+    
     if (minRequired <= finalIndexes.length) return finalIndexes;
 
-    console.log(`[BRIDGE] Assistência (Descarte): IA: ${finalIndexes.length}, Min: ${minRequired}`);
+    console.log(`[BRIDGE] Assistência (Descarte): IA descartou ${finalIndexes.length}, mas a Engine exige ${minRequired}. Completando...`);
     const mentorBest = this.advisor.getBestResponse(selectMsgs, this.gameState);
     if (mentorBest && (mentorBest.label === 'DISCARD' || mentorBest.label === 'DISCARD_AND_REDRAW')) {
         mentorBest.selectedIndexes.forEach(idx => {
