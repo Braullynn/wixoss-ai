@@ -98,29 +98,10 @@ GameBridge.prototype.handleGameMessage = function(msg) {
             // Atualizar estado interno do jogo
             this.processMessage(msgObj);
 
-            if (msgObj.type === 'SELECT') {
-                selectMsgs.push(msgObj.content);
-            } else if (msgObj.type === 'PAY_ENER') {
-                const msg = msgObj.content;
-                msg.label = 'PAY_ENER'; // Garante a padronização
-
-                const selection = self.advisor.strategy.selectEnerPayment(msg, self.gameState);
-                
-                let needed = 0;
-                if (msg.requirements) {
-                    msg.requirements.forEach(r => needed += r.count || 0);
-                }
-
-                if (selection.length >= needed) {
-                    console.log(`[BRIDGE] Automatizando Pagamento (Mentor): PAY_ENER [${selection}]`);
-                    setTimeout(() => self.respond('PAY_ENER', selection), 30);
-                } else if (msg.cancelable) {
-                    console.log(`[BRIDGE] Sem energia suficiente para custo. Cancelando PAY_ENER (null)`);
-                    setTimeout(() => self.respond('PAY_ENER', null), 30);
-                } else {
-                    console.log(`[BRIDGE] Energia insuficiente para custo obrigatorio! Enviando o q tem: [${selection}]`);
-                    setTimeout(() => self.respond('PAY_ENER', selection), 30);
-                }
+            if (msgObj.type === 'SELECT' || msgObj.type === 'PAY_ENER') {
+                const content = msgObj.content;
+                if (msgObj.type === 'PAY_ENER') content.label = 'PAY_ENER';
+                selectMsgs.push(content);
             } else if (msgObj.type === 'WIN' || msgObj.type === 'LOSE') {
                 isGameOver = true;
                 gameResult = msgObj.type;
@@ -206,8 +187,71 @@ GameBridge.prototype.askIA = async function(selectMsgs) {
 
     const action = this.actionSpace.decodeAction(chosenIdx, available);
     if (action) {
-        this.respond(action.label, action.selectedIndex);
+        let finalIndexes = action.selectedIndex;
+        const originalMsg = selectMsgs[action.selectIdx];
+
+        // --- SISTEMA DE ASSISTÊNCIA DE VOO: DISCARD & PAY_ENER ---
+        if (action.label === 'DISCARD' || action.label === 'DISCARD_AND_REDRAW') {
+            finalIndexes = this._assistDiscard(originalMsg, finalIndexes, selectMsgs);
+        } else if (action.label === 'PAY_ENER') {
+            finalIndexes = this._assistPayEner(originalMsg, finalIndexes);
+        }
+
+        this.respond(action.label, finalIndexes);
     }
+};
+
+/**
+ * Auxiliar: Completa o descarte se a IA escolheu menos que o mínimo.
+ */
+GameBridge.prototype._assistDiscard = function(originalMsg, finalIndexes, selectMsgs) {
+    const minRequired = originalMsg ? (originalMsg.min || 0) : 0;
+    if (minRequired <= finalIndexes.length) return finalIndexes;
+
+    console.log(`[BRIDGE] Assistência (Descarte): IA: ${finalIndexes.length}, Min: ${minRequired}`);
+    const mentorBest = this.advisor.getBestResponse(selectMsgs, this.gameState);
+    if (mentorBest && (mentorBest.label === 'DISCARD' || mentorBest.label === 'DISCARD_AND_REDRAW')) {
+        mentorBest.selectedIndexes.forEach(idx => {
+            if (!finalIndexes.includes(idx) && finalIndexes.length < minRequired) {
+                finalIndexes.push(idx);
+            }
+        });
+    }
+
+    // Fallback absoluto
+    for (let i = 0; i < (originalMsg.options?.length || 0) && finalIndexes.length < minRequired; i++) {
+        if (!finalIndexes.includes(i)) finalIndexes.push(i);
+    }
+    return finalIndexes;
+};
+
+/**
+ * Auxiliar: Completa o pagamento de energia garantindo validade para o motor.
+ */
+GameBridge.prototype._assistPayEner = function(originalMsg, finalIndexes) {
+    // Calculamos o pagamento perfeito do Mentor
+    const mentorPayment = this.advisor.strategy.selectEnerPayment(originalMsg, this.gameState);
+    
+    let needed = 0;
+    if (originalMsg.requirements) {
+        originalMsg.requirements.forEach(r => needed += r.count || 0);
+    }
+
+    // Se a IA escolheu o suficiente e de forma válida, confiamos (mas validamos o tamanho)
+    if (finalIndexes.length >= needed) return finalIndexes;
+
+    console.log(`[BRIDGE] Assistência (Energia): IA: ${finalIndexes.length}, Requisito: ${needed}`);
+    
+    // Pegamos a escolha da IA como base e completamos com a do mentor
+    const result = [...finalIndexes];
+    mentorPayment.forEach(idx => {
+        if (!result.includes(idx) && result.length < needed) {
+            result.push(idx);
+        }
+    });
+
+    // Se mesmo assim não deu (IA escolheu errado?), usamos o pagamento do mentor integralmente por segurança
+    return result.length >= needed ? result : mentorPayment;
 };
 
 /**
